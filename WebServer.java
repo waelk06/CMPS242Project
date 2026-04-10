@@ -76,9 +76,86 @@ class HttpRequest implements Runnable {
         fileExists = false;
         }
 
+        // Construct the response message.
+        String statusLine = null;
+        String contentTypeLine = null;
+        String entityBody = null;
+        if (fileExists)
+        {
+            statusLine ="HTTP/1.0 200 OK" +CRLF;
+            contentTypeLine = "Content-type: " + contentType( fileName ) + CRLF;
+        }
+        else
+        {
+            statusLine ="HTTP/1.0 404 Not Found" +CRLF;
+            contentTypeLine =  "Content-type: text/html" + CRLF;
+            entityBody = "<HTML>" + "<HEAD><TITLE>Not Found</TITLE></HEAD>" +
+                    "<BODY>Not Found</BODY></HTML>";
+        }
+
+        // Send the status line.
+        os.writeBytes(statusLine);
+        // Send the content type line.
+        os.writeBytes(contentTypeLine);
+        //Send a blank line to indicate the end of the header lines.
+        os.writeBytes(CRLF);
+
+        // Send the entity body.
+        if (fileExists) {
+            sendBytes(fis, os); fis.close();
+        } else {
+            os.writeBytes(entityBody);
+        }
+
         // Close streams and socket.
         os.close();
         br.close();
         socket.close();
     }
+
+    private static void sendBytes(FileInputStream fis, OutputStream os) throws Exception
+    {
+        // Construct a 1K buffer to hold bytes on their way to the socket.
+        byte[] buffer = new byte[1024];
+        int bytes = 0;
+        // Copy requested file into the socket's output stream.
+        while((bytes = fis.read(buffer))!=-1 )
+        {
+            os.write(buffer, 0, bytes);
+        }
+    }
+
+    // private helper method to determine the file's MIME type
+    private static String contentType(String fileName) {
+        if (fileName.endsWith(".htm") || fileName.endsWith(".html")) {
+            return "text/html";
+        } else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+            return "image/jpeg";
+        } else if (fileName.endsWith(".png")) {
+            return "image/png";
+        } else if (fileName.endsWith(".docx")) {
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        } else if (fileName.endsWith(".doc")) {
+            return "application/msword";
+        } else if (fileName.endsWith(".gif")) {
+            return "image/gif";
+        } else if (fileName.endsWith(".pdf")) {
+            return "application/pdf";
+        } else if (fileName.endsWith(".mp3")) {
+            return "audio/mpeg";
+        } else if (fileName.endsWith(".mp4")) {
+            return "video/mp4";
+        } else if (fileName.endsWith(".ppt")) {
+            return "application/vnd.ms-powerpoint";
+        } else if (fileName.endsWith(".pptx")) {
+            return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        } else if (fileName.endsWith(".rar")) {
+            return "application/vnd.rar";
+        } else if (fileName.endsWith(".txt")) {
+            return "text/plain";
+        } else {
+            return "application/octet-stream"; //file extension is unknown
+        }
+    }
+
 }
