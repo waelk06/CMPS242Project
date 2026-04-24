@@ -3,6 +3,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.io.IOException;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 
 public class UnreliableChannel {
     //different distribution options for the delay
@@ -33,6 +34,9 @@ public class UnreliableChannel {
 
     AtomicInteger delaysA = new AtomicInteger();
     AtomicInteger delaysB = new AtomicInteger();
+
+    //boolean to handle end signals from both users
+    boolean ending = false;
     //i used atomics for these logs for thread safety
 
     //receiver buffer
@@ -88,7 +92,7 @@ public class UnreliableChannel {
     }
 
     //multithreaded packet handler that can drop, delay, and send packets
-    private void handlePacket(int port, int length, InetAddress addr, byte[] data) {
+    private void handlePacket(int port, int length, InetAddress addr, byte[] data) {        
         if (burst.drop()) {
             (port == portA ? dropsA : dropsB).getAndIncrement();
             return;
@@ -131,8 +135,21 @@ public class UnreliableChannel {
             InetAddress receivedAddr = received.getAddress();
             int receivedPort = received.getPort();
             int receivedLength = received.getLength();
-            byte[] threadBuffer = Arrays.copyOf(received.getData(), receivedLength);
-            pool.submit(() -> handlePacket(receivedPort, receivedLength, receivedAddr, threadBuffer));
+            byte[] data = Arrays.copyOf(received.getData(), receivedLength);
+            //this block handles the end signal and ends if 2 ends have been received
+            if (new String(data, StandardCharsets.UTF_8).equals("END")) {
+                if (ending) {
+                    printLogs();
+                    break;
+                } else {
+                    ending = true;
+                }      
+            } else {
+                if (ending) {
+                    ending = false;
+                }
+            }
+            pool.submit(() -> handlePacket(receivedPort, receivedLength, receivedAddr, data));
         }
     }
     
@@ -199,7 +216,7 @@ public class UnreliableChannel {
         }
     }
 
-    public void printStats() {
+    public void printLogs() {
         System.out.printf("Drops and delays from user A: %d | %d", dropsA.get(), delaysA.get());
         System.out.printf("Drops and delays from user A: %d | %d", dropsB.get(), delaysB.get());
         System.out.printf("Average delay from user A: %f", delayA.sum()/packetCountA.get());
