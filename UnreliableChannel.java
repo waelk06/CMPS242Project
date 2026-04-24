@@ -36,7 +36,8 @@ public class UnreliableChannel {
     AtomicInteger delaysB = new AtomicInteger();
 
     //boolean to handle end signals from both users
-    boolean ending = false;
+    boolean endingA = false;
+    boolean endingB = false;
     //i used atomics for these logs for thread safety
 
     //receiver buffer
@@ -136,18 +137,18 @@ public class UnreliableChannel {
             int receivedPort = received.getPort();
             int receivedLength = received.getLength();
             byte[] data = Arrays.copyOf(received.getData(), receivedLength);
-            //this block handles the end signal and ends if 2 ends have been received
+            //this block handles the end signal and ends if an end has been received from both users
             if (new String(data, StandardCharsets.UTF_8).equals("END")) {
-                if (ending) {
+                if ((endingA && receivedPort == portB) || (endingB && receivedPort == portB)) {
                     printLogs();
                     break;
                 } else {
-                    ending = true;
+                    if (receivedPort == portA) {
+                        endingA = true;
+                    } else if (receivedPort == portB) {
+                        endingB = true;
+                    }
                 }      
-            } else {
-                if (ending) {
-                    ending = false;
-                }
             }
             pool.submit(() -> handlePacket(receivedPort, receivedLength, receivedAddr, data));
         }
