@@ -41,7 +41,7 @@ public class UnreliableChannel {
     //i used atomics for these logs for thread safety
 
     //receiver buffer
-    byte[] receiveBuffer = new byte[2048];
+    byte[] receiveBuffer = new byte[65536];
 
     //mean and stdev for the gaussian distribution
     private double mean;
