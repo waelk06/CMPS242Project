@@ -1,5 +1,6 @@
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 import java.io.IOException;
 import java.net.*;
 
@@ -18,6 +19,23 @@ public class UnreliableChannel {
     public int portA;
     public int portB;
 
+    //counts of all packets sent from both sides
+    AtomicInteger packetCountA = new AtomicInteger();
+    AtomicInteger packetCountB = new AtomicInteger();
+
+    //total delay
+    DoubleAdder delayA = new DoubleAdder();
+    DoubleAdder delayB = new DoubleAdder();
+
+    //total drop count
+    AtomicInteger dropsA = new AtomicInteger();
+    AtomicInteger dropsB = new AtomicInteger();
+
+    AtomicInteger delaysA = new AtomicInteger();
+    AtomicInteger delaysB = new AtomicInteger();
+    //i used atomics for these logs for thread safety
+
+    //receiver buffer
     byte[] receiveBuffer = new byte[2048];
 
     //mean and stdev for the gaussian distribution
@@ -33,7 +51,7 @@ public class UnreliableChannel {
     //gilbert model stuff
     private BurstLossSimulator burst;
 
-    //constructor 
+    //constructor
     public UnreliableChannel(char distribution, int minD, int maxD, double mean, double stdev, double lambda, int channelPort, int portA, int portB, double goodP, double burstP, double goodToBurst, double burstToGood) {
         switch (distribution) {
             case 'u':
@@ -72,12 +90,17 @@ public class UnreliableChannel {
     //multithreaded packet handler that can drop, delay, and send packets
     private void handlePacket(int port, int length, InetAddress addr, byte[] data) {
         if (burst.drop()) {
+            (port == portA ? dropsA : dropsB).getAndIncrement();
             return;
         }
         try {
+            double delay = calcDelay();
             Thread.sleep(calcDelay());
-            if (port == portA) {
-                socket.send(new DatagramPacket(data, length, addr, (port == portA ? portB : portA)));
+            socket.send(new DatagramPacket(data, length, addr, (port == portA ? portB : portA)));
+            (port == portA ? delayA : delayB).add(delay);
+            (port == portA ? packetCountA : packetCountB).getAndIncrement();
+            if (delay > 0) {
+                (port == portA ? delaysA : delaysB).getAndIncrement();
             }
         } catch (Exception e) {
             
@@ -161,8 +184,8 @@ public class UnreliableChannel {
                         break;
                 }
             }
-            if (portA == 0 || portB == 0 || channelPort == 0 || portA == portB || portB == channelPort || portA == channelPort){
-                throw new Exception("Illegal ports");
+            if (portA < 1024 || portB < 1024 || channelPort < 1024 || portA == portB || portB == channelPort || portA == channelPort){
+                throw new Exception("Illegal or reserved ports");
             }
         } catch (Exception e) {
             System.err.println(e.getMessage());
@@ -174,6 +197,13 @@ public class UnreliableChannel {
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
+    }
+
+    public void printStats() {
+        System.out.printf("Drops and delays from user A: %d | %d", dropsA.get(), delaysA.get());
+        System.out.printf("Drops and delays from user A: %d | %d", dropsB.get(), delaysB.get());
+        System.out.printf("Average delay from user A: %f", delayA.sum()/packetCountA.get());
+        System.out.printf("Average delay from user A: %f", delayB.sum()/packetCountB.get());
     }
 }
 //class for simulating burst packet loss instead of just normal loss, using gilbert model, i did ask claude what the best way to implement bursts would be
