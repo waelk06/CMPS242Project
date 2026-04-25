@@ -6,7 +6,7 @@ public class RUDPSource {
     static final byte DATA = 0, ACK = 1, FIN = 2, FILENAME = 3;
 
     public static void main(String[] args) throws UnknownHostException, InterruptedException {
-        final int chunkSize = 65500; // max payload bytes per packet
+        final int chunkSize = 60000; // max payload bytes per packet
         final int TIMEOUT   = 500;  // ms to wait for an ACK before retransmitting
         byte[] ack  = new byte[10]; // reusable buffer for incoming ACK packets
         int offset  = 0;            // byte offset of the current chunk in the file
