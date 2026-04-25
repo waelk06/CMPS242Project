@@ -139,7 +139,7 @@ public class UnreliableChannel {
             byte[] data = Arrays.copyOf(received.getData(), receivedLength);
             //this block handles the end signal and ends if an end has been received from both users
             if (new String(data, StandardCharsets.UTF_8).equals("END")) {
-                if ((endingA && receivedPort == portB) || (endingB && receivedPort == portB)) {
+                if ((endingA && receivedPort == portB) || (endingB && receivedPort == portA)) {
                     printLogs();
                     break;
                 } else {
