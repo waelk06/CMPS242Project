@@ -218,10 +218,10 @@ public class UnreliableChannel {
     }
 
     public void printLogs() {
-        System.out.printf("Drops and delays from user A: %d | %d", dropsA.get(), delaysA.get());
-        System.out.printf("Drops and delays from user A: %d | %d", dropsB.get(), delaysB.get());
-        System.out.printf("Average delay from user A: %f", delayA.sum()/packetCountA.get());
-        System.out.printf("Average delay from user A: %f", delayB.sum()/packetCountB.get());
+        System.out.printf("Drops and delays from user A: %d | %d\n", dropsA.get(), delaysA.get());
+        System.out.printf("Drops and delays from user A: %d | %d\n", dropsB.get(), delaysB.get());
+        System.out.printf("Average delay from user A: %f\n", delayA.sum()/packetCountA.get());
+        System.out.printf("Average delay from user A: %f\n", delayB.sum()/packetCountB.get());
     }
 }
 //class for simulating burst packet loss instead of just normal loss, using gilbert model, i did ask claude what the best way to implement bursts would be
